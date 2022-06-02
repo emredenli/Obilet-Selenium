@@ -15,6 +15,7 @@ public class BusPage {
 
     Methods methods;
     WebDriver driver;
+    String value = null;
 
     public BusPage(WebDriver driver) {
         this.methods = new Methods();
@@ -23,10 +24,13 @@ public class BusPage {
 
     public void findBusTickets() {
 
+        String text = methods.getText(By.cssSelector("#main>h2"));
+        System.out.println("Text : " + text);
+
         //Departure-City
         methods.click(By.cssSelector("#origin-input"));
         methods.sendKeys(By.cssSelector("#origin-input"), "İstanbul Avrupa");
-        methods.waitBySeconds(1);
+        methods.waitBySeconds(2);
         List<WebElement> dep = driver.findElements(By.cssSelector("#origin>.results>ul>li"));
         dep.get(0).click();
         methods.waitBySeconds(1);
@@ -34,7 +38,7 @@ public class BusPage {
         //Destination-City
         methods.click(By.cssSelector("#destination-input"));
         methods.sendKeys(By.cssSelector("#destination-input"), "Manisa");
-        methods.waitBySeconds(1);
+        methods.waitBySeconds(2);
         List<WebElement> des = driver.findElements(By.cssSelector("#destination>.results>ul>li"));
         des.get(0).click();
         methods.waitBySeconds(1);
@@ -81,16 +85,15 @@ public class BusPage {
 
         items.get(random.nextInt(rndItem)).click();
 
-        methods.waitBySeconds(2);
+        methods.waitBySeconds(1);
     }
 
     public void scroll() {
 
         methods.scrollWithAction(By.cssSelector("#faq-title"));
-        methods.waitBySeconds(2);
-
+        methods.waitBySeconds(1);
         methods.scrollWithAction(By.cssSelector(".container>.logo"));
-        methods.waitBySeconds(2);
+        methods.waitBySeconds(1);
 
     }
 
@@ -101,13 +104,28 @@ public class BusPage {
         long itemsCount = items.stream().count();
         int rndItem = (int) itemsCount;
         rndItem = rndItem - 1;
-        items.get(random.nextInt(rndItem)).click();
+
+        int rnd = random.nextInt(rndItem);
+        value = items.get(rnd).getAttribute("id");
+        items.get(rnd).click();
+        System.out.println("idValue : " + value);
         methods.waitBySeconds(3);
 
     }
 
-    public void chooseSeat() {
+    public void errorControl() {
+        boolean error = methods.isElementVisible(By.cssSelector(".error.active"));
 
+        if (error == true) {
+            System.out.println("Seçtiğiniz sefer satışa kapatılmış veya iptal edilmiştir.");
+            driver.close();
+            driver.quit();
+        } else {
+            System.out.println("errorControl-False");
+        }
+    }
+
+    public void chooseSeat() {
 
         int value1 = 0, value2 = 0;
 
@@ -136,17 +154,6 @@ public class BusPage {
                 methods.click(By.cssSelector("button.male"));
                 methods.waitBySeconds(1);
 
-                /*//ikili-koltuklarda-yanlis-cinsiyet-secimi(failChoose)
-                boolean failChoose = methods.isElementVisible(By.cssSelector(".ob-modal.error.pop.open"));
-                if (failChoose == true) {
-                    methods.click(By.cssSelector("button.red"));
-                    methods.waitBySeconds(2);
-                    items.get(value1).click();
-                    methods.waitBySeconds(2);
-                    methods.click(By.cssSelector("button.female "));
-                    methods.waitBySeconds(1);
-                }*/
-
             } else if (rItem != 0) {
                 value2 = random.nextInt(rItem);
                 itm.get(value2).click();
@@ -160,7 +167,95 @@ public class BusPage {
         }
         methods.click(By.cssSelector("span.ready"));
         methods.waitBySeconds(1);
+    }
 
+    public void notSingleChooseSeat() {
+
+        Random random = new Random();
+        List<WebElement> items = driver.findElements(By.cssSelector(".bus-layout>.available.active.not-single-seat"));
+        long itmCount = items.stream().count();
+        int itm = (int) itmCount;
+        int value = random.nextInt(itm);
+
+        if (itm != 0) {
+            items.get(value).click();
+            methods.waitBySeconds(1);
+            methods.click(By.cssSelector("button.male"));
+
+            boolean maleDsb = driver.getPageSource().contains(" Seçtiğiniz koltuk yalnızca kadın yolculara satılabilir. ");
+
+            if (maleDsb == true) {
+                methods.click(By.cssSelector("button.red"));
+                items.get(value).click();
+                methods.click(By.cssSelector(".drop-content>.female"));
+                System.out.println("choose-female");
+                methods.waitBySeconds(1);
+            } else {
+                System.out.println("choose-male");
+            }
+
+        } else {
+            System.out.println("ikili koltuk bulunamadi.");
+        }
+    }
+
+    public void singleChooseSeat() {
+
+        String vl = "#main>ul#list>#" + this.value + ">.main.row>.trip.col>.type";
+        System.out.println("vl : " + vl);
+        System.out.println("#" + this.value + ">.main.row>.trip.col>.type");
+
+        String txtValue = methods.getText(By.cssSelector(vl));
+
+        System.out.println("txtValue : " + txtValue);
+
+        switch (txtValue) {
+
+            case "2+1":
+
+                WebDriverWait wait = new WebDriverWait(driver, 1);
+                WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".available.active.single-seat")));
+                methods.waitBySeconds(1);
+
+                if (element.isDisplayed()) {
+                    Random random = new Random();
+                    List<WebElement> items = driver.findElements(By.cssSelector(".available.active.single-seat"));
+                    long itmCount = items.stream().count();
+                    int itm = (int) itmCount;
+                    int value = random.nextInt(itm);
+                    items.get(value).click();
+                    methods.waitBySeconds(1);
+                    methods.click(By.cssSelector("button.male"));
+                    break;
+                } else {
+                    System.out.println("2+1-Element-Bulunamadi");
+                }
+
+            case "2+2":
+                System.out.println("tekli koltuk bulunamadi.");
+                break;
+
+            default:
+                System.out.println("! HATA !");
+
+        }
+
+        //onayla ve devam et buton
+        methods.click(By.cssSelector("span.ready"));
+        methods.waitBySeconds(1);
+
+        boolean farkliKoltukSec = driver.getPageSource().contains(" Farklı Koltuk Seç ");
+        if (farkliKoltukSec == true) {
+            methods.click(By.cssSelector(".header.with-icon>button.close"));
+            methods.waitBySeconds(1);
+            methods.click(By.cssSelector(".available.active.single-seat"));
+            methods.waitBySeconds(1);
+            methods.click(By.cssSelector("button.male"));
+            methods.waitBySeconds(1);
+            System.out.println("farkliKoltukSec-Secim");
+        } else {
+            System.out.println("farkliKoltukSec-SecimOlmadi");
+        }
 
     }
 

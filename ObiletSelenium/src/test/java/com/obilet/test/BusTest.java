@@ -12,13 +12,15 @@ public class BusTest extends BaseTest {
         HomePage homePage = new HomePage(driver);
         BusPage busPage = new BusPage(driver);
 
-
-        homePage.lightingTextClose();
+         homePage.lightingTextClose();
         busPage.scroll();
         busPage.chooseDate();
         busPage.findBusTickets();
         busPage.chooseBus();
-        busPage.chooseSeat();
+        //busPage.errorControl();
+        //busPage.chooseSeat();
+        busPage.notSingleChooseSeat();
+        busPage.singleChooseSeat();
         busPage.failBuy();
         //busPage.passBuy();
     }
